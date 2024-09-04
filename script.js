@@ -204,7 +204,7 @@ function updateBalance() {
     currentBalanceElement.classList.add(balance >= 0 ? 'positive' : 'negative');
 }
 
-function generateSummary() {
+/*function generateSummary() {
     const period = document.getElementById('summaryPeriod').value;
     const currentDate = new Date();
     const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - (period === 'weekly' ? 7 : 30));
@@ -287,6 +287,7 @@ function drawSummaryGraph(income, expenses) {
     ctx.fillText('$' + income.toFixed(2), 30 + barWidth / 2, canvas.height - incomeHeight - 25);
     ctx.fillText('$' + expenses.toFixed(2), 30 + barWidth * 2.5, canvas.height - expensesHeight - 25);
 }
+    */
 
 function filterTransactions() {
     const searchTerm = searchTransactions.value.toLowerCase();
