@@ -122,6 +122,39 @@ generateSummaryBtn.addEventListener('click', () => showSection(summaryView));
 transactionInputForm.addEventListener('submit', addTransaction);
 searchTransactions.addEventListener('input', filterTransactions);
 
+document.addEventListener('DOMContentLoaded', function() {
+    const navButtons = document.querySelectorAll('nav button');
+    const navLine = document.createElement('div');
+    navLine.classList.add('nav-line');
+    document.querySelector('nav').appendChild(navLine);
+
+    // Function to move the nav-line to the hovered or active button
+    function updateNavLine(button) {
+        const buttonRect = button.getBoundingClientRect();
+        const navRect = button.parentElement.getBoundingClientRect();
+        navLine.style.width = `${buttonRect.width}px`;
+        navLine.style.left = `${buttonRect.left - navRect.left}px`;
+    }
+
+    // Initialize the nav-line on the active page or the first button
+    const activeButton = document.querySelector('nav button.active') || navButtons[0];
+    updateNavLine(activeButton);
+
+    // Add event listeners for hovering and clicking
+    navButtons.forEach(button => {
+        button.addEventListener('mouseenter', () => {
+            updateNavLine(button);
+        });
+
+        button.addEventListener('click', () => {
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            updateNavLine(button);
+        });
+    });
+});
+
+
 function loadUserData(user) {
     database.ref('users/' + user.uid + '/transactions').on('value', (snapshot) => {
         transactions = snapshot.val() || [];
@@ -177,6 +210,40 @@ function renderTransactions() {
     });
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to update the balance and color
+    function updateBalance(balanceValue) {
+        const balanceElement = document.getElementById('currentBalance');
+
+        // Update the balance text with proper formatting
+        balanceElement.textContent = `$${balanceValue.toFixed(2)}`;
+
+        // Check if the balance is negative, and update the color
+        if (balanceValue < 0) {
+            balanceElement.style.color = 'red';
+        } else {
+            balanceElement.style.color = 'green'; // Set it to green if balance is positive or zero
+        }
+    }
+
+    // Example of how you might call updateBalance with dynamic data
+    let balanceValue = 50.00; // Example balance, can be dynamically set
+    updateBalance(balanceValue);
+
+    // Simulate changing the balance to test both positive and negative
+    document.getElementById('testNegative').addEventListener('click', function() {
+        balanceValue = -25.00;
+        updateBalance(balanceValue);
+    });
+
+    document.getElementById('testPositive').addEventListener('click', function() {
+        balanceValue = 100.00;
+        updateBalance(balanceValue);
+    });
+});
+
+
+
 function editTransaction(index) {
     const transaction = transactions[index];
     document.getElementById('transactionType').value = transaction.type;
@@ -203,6 +270,7 @@ function updateBalance() {
     currentBalanceElement.classList.remove('positive', 'negative');
     currentBalanceElement.classList.add(balance >= 0 ? 'positive' : 'negative');
 }
+
 
 /*function generateSummary() {
     const period = document.getElementById('summaryPeriod').value;
