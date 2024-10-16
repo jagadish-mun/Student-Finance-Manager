@@ -95,12 +95,16 @@ if (isLoginPage) {
     const currentBalanceElement = document.getElementById('currentBalance');
     const summaryResults = document.getElementById('summaryResults');
     const searchTransactions = document.getElementById('searchTransactions');
+    const chatbotMessages = document.getElementById('chatbotMessages');
+    const userInput = document.getElementById('userInput');
+    const sendMessage = document.getElementById('sendMessage');
 
     // Check auth state
     auth.onAuthStateChanged((user) => {
         if (user) {
             loadUserData(user);
             showSection(transactionForm); // Show "Add Transaction" by default when dashboard loads
+            initializeChatbot(); // Initialize chatbot when the dashboard loads
         } else {
             window.location.href = 'index.html';
         }
@@ -237,26 +241,6 @@ if (isLoginPage) {
         `;
     }
     
-    // Edit and delete transaction functions
-    function editTransaction(index) {
-        const transaction = transactions[index];
-        document.getElementById('transactionType').value = transaction.type;
-        document.getElementById('amount').value = transaction.amount;
-        document.getElementById('category').value = transaction.category;
-        document.getElementById('date').value = transaction.date;
-        transactions.splice(index, 1);
-        saveTransactions();
-        renderTransactions();
-        showSection(transactionForm);
-    }
-    
-    function deleteTransaction(index) {
-        transactions.splice(index, 1);
-        saveTransactions();
-        renderTransactions();
-    }
-    
-    // Function to filter transactions by search query
     function filterTransactions() {
         const query = searchTransactions.value.toLowerCase();
         Array.from(transactionsList.children).forEach(li => {
@@ -264,5 +248,81 @@ if (isLoginPage) {
             li.style.display = text.includes(query) ? '' : 'none';
         });
     }
+
+    function saveTransactions() {
+        const user = auth.currentUser;
+        if (user) {
+            database.ref('users/' + user.uid + '/transactions').set(transactions);
+        }
+    }
+
+    // New and updated functions for chatbot functionality
+    function initializeChatbot() {
+        if (chatbotMessages) {
+            chatbotMessages.innerHTML = '<p class="bot-message">Hello! I\'m your financial assistant. How can I help you today?</p>';
+        }
+        if (sendMessage) {
+            sendMessage.addEventListener('click', handleChatbotInteraction);
+        }
+        if (userInput) {
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleChatbotInteraction();
+                }
+            });
+        }
+    }
+
+    async function handleChatbotInteraction() {
+        if (!userInput || !chatbotMessages) return;
+
+        const userMessage = userInput.value.trim();
+        if (userMessage === '') return;
+
+        // Display user message
+        chatbotMessages.innerHTML += `<p class="user-message">${userMessage}</p>`;
+        userInput.value = '';
+
+        // Generate chatbot response
+        const prompt = await generateFinancialReportPrompt();
+        const aiResponse = await getAIResponse(prompt + "\n\nUser question: " + userMessage);
+
+        // Display chatbot response
+        chatbotMessages.innerHTML += `<p class="bot-message">${aiResponse}</p>`;
+
+        // Scroll to bottom of chat
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+
+    async function generateFinancialReportPrompt() {
+        const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const expenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        const balance = income - expenses;
+
+        const categorySummary = transactions.reduce((summary, t) => {
+            if (!summary[t.category]) summary[t.category] = 0;
+            summary[t.category] += t.amount;
+            return summary;
+        }, {});
+
+        const prompt = `
+            Financial Summary:
+            Total Income: $${income.toFixed(2)}
+            Total Expenses: $${expenses.toFixed(2)}
+            Current Balance: $${balance.toFixed(2)}
+
+            Category Breakdown:
+            ${Object.entries(categorySummary).map(([category, amount]) => `${category}: $${amount.toFixed(2)}`).join('\n')}
+
+            Based on this financial information, provide advice and answer the following question:
+        `;
+
+        return prompt;
+    }
+
+    // Note: The getAIResponse function is not provided in the given code snippets.
+    // You'll need to implement this function to interact with your AI service.
+    // async function getAIResponse(prompt) {
+    //     // Implement AI interaction here
+    // }
 }
-    // Initialize the application by checking the auth state and setting up event listeners

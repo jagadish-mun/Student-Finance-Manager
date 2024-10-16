@@ -58,7 +58,17 @@
                     </select>
                 </div>
                 <div id="summaryResults"></div>
-                <canvas id="summaryGraph" width="400" height="200"></canvas>
+                <canvas id="summaryGraph" width="400" height="50"></canvas>
+                
+                <!-- New Chatbot Section -->
+                <div id="chatbotSection">
+                    <h3><i class="fas fa-robot"></i> Financial Assistant</h3>
+                    <div id="chatbotMessages"></div>
+                    <div id="chatbotInput">
+                        <input type="text" id="userInput" placeholder="Ask for financial advice...">
+                        <button id="sendMessage"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
             </section>
             <section id="transactionListSection" class="card">
                 <h2><i class="fas fa-list"></i> Transactions</h2>
@@ -77,5 +87,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <script src="script.js"></script>
+    <script src="gpt.js"></script>
 </body>
 </html>
