@@ -6,6 +6,10 @@
     <title>Student Finance Manager - Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <!-- Include jsPDF library for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Include jsPDF AutoTable plugin for better tables (Optional but recommended) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <div id="appContainer" class="container">
@@ -16,9 +20,11 @@
             <button id="addTransactionBtn" class="active"><i class="fas fa-plus"></i> Add Transaction</button>
             <button id="viewBalanceBtn"><i class="fas fa-balance-scale"></i> View Balance</button>
             <button id="generateSummaryBtn"><i class="fas fa-chart-pie"></i> Generate Summary</button>
+            <button id="helpBtn"><i class="fas fa-question-circle"></i> Help</button>
             <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </nav>
         <main>
+            <!-- Add Transaction Section -->
             <section id="transactionForm" class="card hidden">
                 <h2><i class="fas fa-exchange-alt"></i> Add Transaction</h2>
                 <form id="transactionInputForm">
@@ -44,10 +50,14 @@
                     <button type="submit" class="btn-primary">Add Transaction</button>
                 </form>
             </section>
+            
+            <!-- View Balance Section -->
             <section id="balanceView" class="card hidden">
                 <h2><i class="fas fa-piggy-bank"></i> Current Balance</h2>
                 <p id="currentBalance" class="balance"></p>
             </section>
+            
+            <!-- Financial Summary Section -->
             <section id="summaryView" class="card hidden">
                 <h2><i class="fas fa-chart-bar"></i> Financial Summary</h2>
                 <div class="form-group">
@@ -60,7 +70,7 @@
                 <div id="summaryResults"></div>
                 <canvas id="summaryGraph" width="400" height="50"></canvas>
                 
-                <!-- New Chatbot Section -->
+                <!-- Chatbot Section -->
                 <div id="chatbotSection">
                     <h3><i class="fas fa-robot"></i> Financial Assistant</h3>
                     <div id="chatbotMessages"></div>
@@ -70,13 +80,94 @@
                     </div>
                 </div>
             </section>
+            
+            <!-- Transactions List Section -->
             <section id="transactionListSection" class="card">
                 <h2><i class="fas fa-list"></i> Transactions</h2>
+                
+                <!-- Filters Section -->
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="filterType">Type:</label>
+                        <select id="filterType">
+                            <option value="all">All</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filterCategory">Category:</label>
+                        <select id="filterCategory">
+                            <option value="all">All</option>
+                            <!-- Categories will be dynamically populated -->
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filterSortBy">Sort By:</label>
+                        <select id="filterSortBy">
+                            <option value="date">Date</option>
+                            <option value="amount">Amount</option>
+                            <option value="category">Category</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="filterSortOrder">Order:</label>
+                        <select id="filterSortOrder">
+                            <option value="asc">Ascending</option>
+                            <option value="desc">Descending</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Search Container -->
                 <div class="search-container">
                     <input type="text" id="searchTransactions" placeholder="Search transactions...">
                     <i class="fas fa-search"></i>
                 </div>
+                
+                <!-- Transactions List -->
                 <ul id="transactions"></ul>
+                
+                <!-- Export Buttons at the Bottom -->
+                <div class="export-buttons">
+                    <button id="exportPdfBtn" class="btn-export"><i class="fas fa-file-pdf"></i> Export as PDF</button>
+                    <button id="exportCsvBtn" class="btn-export"><i class="fas fa-file-csv"></i> Export as CSV</button>
+                </div>
+            </section>
+            
+            <!-- Help/FAQ Section -->
+            <section id="helpSection" class="card hidden">
+                <h2><i class="fas fa-question-circle"></i> Help & FAQ</h2>
+                <div class="faq">
+                    <div class="faq-item">
+                        <h3>1. How to Add a Transaction?</h3>
+                        <p>Navigate to the <strong>Add Transaction</strong> tab, fill out the form with the transaction details, and click <strong>Add Transaction</strong>.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>2. How to View My Current Balance?</h3>
+                        <p>Click on the <strong>View Balance</strong> tab to see your current financial balance, calculated from your income and expenses.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>3. How to Generate a Financial Summary?</h3>
+                        <p>Go to the <strong>Generate Summary</strong> tab, select the desired period (Weekly or Monthly), and view your financial summary, including total income, expenses, and category breakdowns.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>4. How to Export My Transactions?</h3>
+                        <p>In the <strong>Transactions</strong> tab, use the <strong>Export as PDF</strong> or <strong>Export as CSV</strong> buttons at the bottom to download your transactions for offline use or sharing.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>5. How to Use the Chatbot?</h3>
+                        <p>Within the <strong>Generate Summary</strong> tab, scroll to the <strong>Financial Assistant</strong> section. Type your financial questions or requests in the input field and click the send button to receive assistance.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>6. How to Logout?</h3>
+                        <p>Click the <strong>Logout</strong> button in the navigation bar to securely sign out of your account.</p>
+                    </div>
+                    <!-- Add more FAQs as needed -->
+                </div>
             </section>
         </main>
     </div>

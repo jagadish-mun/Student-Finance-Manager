@@ -25,6 +25,7 @@ if (isLoginPage) {
     const signupForm = document.getElementById('signupForm');
     const showSignup = document.getElementById('showSignup');
     const showLogin = document.getElementById('showLogin');
+    const googleSignInBtn = document.getElementById('googleSignInBtn');
 
     // Show/hide forms
     showSignup.addEventListener('click', () => {
@@ -72,6 +73,27 @@ if (isLoginPage) {
             });
     });
 
+    // Google Sign-In
+    googleSignInBtn.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider)
+            .then((result) => {
+                const user = result.user;
+                database.ref('users/' + user.uid).once('value').then((snapshot) => {
+                    if (!snapshot.exists()) {
+                        database.ref('users/' + user.uid).set({
+                            email: user.email,
+                            transactions: []
+                        });
+                    }
+                    window.location.href = 'dashboard.html';
+                });
+            })
+            .catch((error) => {
+                alert(error.message);
+            });
+    });
+
     // Check auth state
     auth.onAuthStateChanged((user) => {
         if (user) {
@@ -87,9 +109,11 @@ if (isLoginPage) {
     const addTransactionBtn = document.getElementById('addTransactionBtn');
     const viewBalanceBtn = document.getElementById('viewBalanceBtn');
     const generateSummaryBtn = document.getElementById('generateSummaryBtn');
+    const helpBtn = document.getElementById('helpBtn');
     const transactionForm = document.getElementById('transactionForm');
     const balanceView = document.getElementById('balanceView');
     const summaryView = document.getElementById('summaryView');
+    const helpSection = document.getElementById('helpSection');
     const transactionInputForm = document.getElementById('transactionInputForm');
     const transactionsList = document.getElementById('transactions');
     const currentBalanceElement = document.getElementById('currentBalance');
@@ -98,6 +122,16 @@ if (isLoginPage) {
     const chatbotMessages = document.getElementById('chatbotMessages');
     const userInput = document.getElementById('userInput');
     const sendMessage = document.getElementById('sendMessage');
+
+    // New Filter Elements
+    const filterType = document.getElementById('filterType');
+    const filterCategory = document.getElementById('filterCategory');
+    const filterSortBy = document.getElementById('filterSortBy');
+    const filterSortOrder = document.getElementById('filterSortOrder');
+
+    // Export Buttons
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
 
     // Check auth state
     auth.onAuthStateChanged((user) => {
@@ -123,22 +157,46 @@ if (isLoginPage) {
     addTransactionBtn.addEventListener('click', () => showSection(transactionForm));
     viewBalanceBtn.addEventListener('click', () => showSection(balanceView));
     generateSummaryBtn.addEventListener('click', () => showSection(summaryView));
+    helpBtn.addEventListener('click', () => showSection(helpSection));
     transactionInputForm.addEventListener('submit', addTransaction);
-    searchTransactions.addEventListener('input', filterTransactions);
+    
+    // Filter Event Listeners
+    filterType.addEventListener('change', applyFilters);
+    filterCategory.addEventListener('change', applyFilters);
+    filterSortBy.addEventListener('change', applyFilters);
+    filterSortOrder.addEventListener('change', applyFilters);
+    searchTransactions.addEventListener('input', applyFilters);
 
+    // Export Event Listeners
+    exportPdfBtn.addEventListener('click', exportAsPDF);
+    exportCsvBtn.addEventListener('click', exportAsCSV);
+
+    // Function to load user data from Firebase
     function loadUserData(user) {
         database.ref('users/' + user.uid + '/transactions').on('value', (snapshot) => {
-            transactions = snapshot.val() || [];
-            renderTransactions();
+            const data = snapshot.val() || [];
+            // Assign unique IDs if they don't exist
+            transactions = data.map(t => t.id ? t : { ...t, id: Date.now() + Math.random() });
+            populateCategoryFilter(); // Populate categories
+            applyFilters(); // Apply filters to render transactions
             updateBalance();
         });
     }
 
+    // Function to populate the Category filter dynamically
+    function populateCategoryFilter() {
+        const categories = Array.from(new Set(transactions.map(t => t.category)));
+        filterCategory.innerHTML = '<option value="all">All</option>' + 
+            categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    }
+
+    // Function to show a specific section and hide others
     function showSection(section) {
         // Hide all sections
         transactionForm.classList.add('hidden');
         balanceView.classList.add('hidden');
         summaryView.classList.add('hidden');
+        helpSection.classList.add('hidden');
         // Show the selected section
         section.classList.remove('hidden');
         section.style.animation = 'none';
@@ -148,9 +206,11 @@ if (isLoginPage) {
         if (section === summaryView) generateSummary();
     }
 
+    // Function to add a new transaction
     function addTransaction(e) {
         e.preventDefault();
         const transaction = {
+            id: Date.now(), // Unique ID
             type: document.getElementById('transactionType').value,
             amount: parseFloat(document.getElementById('amount').value),
             category: document.getElementById('category').value,
@@ -158,22 +218,24 @@ if (isLoginPage) {
         };
         transactions.push(transaction);
         saveTransactions();
-        renderTransactions();
+        populateCategoryFilter();
+        applyFilters();
         transactionInputForm.reset();
     }
 
-    function renderTransactions() {
+    // Function to render transactions (filtered and sorted)
+    function renderTransactions(transactionsToRender = transactions) {
         transactionsList.innerHTML = '';
-        transactions.forEach((transaction, index) => {
+        transactionsToRender.forEach((transaction) => {
             const li = document.createElement('li');
             li.innerHTML = `
                 <span>
                     <i class="fas fa-${transaction.type === 'income' ? 'plus' : 'minus'}"></i>
-                    ${transaction.date} - ${transaction.type}: $${transaction.amount.toFixed(2)} (${transaction.category})
+                    ${transaction.date} - ${capitalizeFirstLetter(transaction.type)}: $${transaction.amount.toFixed(2)} (${transaction.category})
                 </span>
                 <div>
-                    <button onclick="editTransaction(${index})" class="btn-edit"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteTransaction(${index})" class="btn-delete"><i class="fas fa-trash"></i></button>
+                    <button onclick="editTransaction(${transaction.id})" class="btn-edit"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteTransaction(${transaction.id})" class="btn-delete"><i class="fas fa-trash"></i></button>
                 </div>
             `;
             li.classList.add(transaction.type);
@@ -181,7 +243,10 @@ if (isLoginPage) {
         });
     }
 
-    function editTransaction(index) {
+    // Function to edit a transaction
+    function editTransaction(id) {
+        const index = transactions.findIndex(t => t.id === id);
+        if (index === -1) return;
         const transaction = transactions[index];
         document.getElementById('transactionType').value = transaction.type;
         document.getElementById('amount').value = transaction.amount;
@@ -189,16 +254,24 @@ if (isLoginPage) {
         document.getElementById('date').value = transaction.date;
         transactions.splice(index, 1);
         saveTransactions();
-        renderTransactions();
+        populateCategoryFilter();
+        applyFilters();
         showSection(transactionForm);
     }
 
-    function deleteTransaction(index) {
-        transactions.splice(index, 1);
-        saveTransactions();
-        renderTransactions();
+    // Function to delete a transaction
+    function deleteTransaction(id) {
+        if (confirm('Are you sure you want to delete this transaction?')) {
+            const index = transactions.findIndex(t => t.id === id);
+            if (index === -1) return;
+            transactions.splice(index, 1);
+            saveTransactions();
+            populateCategoryFilter();
+            applyFilters();
+        }
     }
 
+    // Function to update the current balance
     function updateBalance() {
         const balance = transactions.reduce((total, transaction) => {
             return transaction.type === 'income' ? total + transaction.amount : total - transaction.amount;
@@ -208,6 +281,7 @@ if (isLoginPage) {
         currentBalanceElement.classList.add(balance >= 0 ? 'positive' : 'negative');
     }
 
+    // Function to generate financial summary
     function generateSummary() {
         const period = document.getElementById('summaryPeriod').value;
         const currentDate = new Date();
@@ -241,14 +315,54 @@ if (isLoginPage) {
         `;
     }
     
-    function filterTransactions() {
-        const query = searchTransactions.value.toLowerCase();
-        Array.from(transactionsList.children).forEach(li => {
-            const text = li.textContent.toLowerCase();
-            li.style.display = text.includes(query) ? '' : 'none';
+    // Function to apply filters and sort transactions
+    function applyFilters() {
+        let filteredTransactions = [...transactions];
+        
+        // Filter by Type
+        const type = filterType.value;
+        if (type !== 'all') {
+            filteredTransactions = filteredTransactions.filter(t => t.type === type);
+        }
+        
+        // Filter by Category
+        const category = filterCategory.value;
+        if (category !== 'all') {
+            filteredTransactions = filteredTransactions.filter(t => t.category === category);
+        }
+        
+        // Search Filter
+        const searchQuery = searchTransactions.value.toLowerCase();
+        if (searchQuery) {
+            filteredTransactions = filteredTransactions.filter(t => 
+                t.category.toLowerCase().includes(searchQuery) ||
+                t.type.toLowerCase().includes(searchQuery)
+                // Add more fields if needed
+            );
+        }
+        
+        // Sort
+        const sortBy = filterSortBy.value;
+        const sortOrder = filterSortOrder.value;
+        
+        filteredTransactions.sort((a, b) => {
+            let comparison = 0;
+            if (sortBy === 'date') {
+                comparison = new Date(a.date) - new Date(b.date);
+            } else if (sortBy === 'amount') {
+                comparison = a.amount - b.amount;
+            } else if (sortBy === 'category') {
+                comparison = a.category.localeCompare(b.category);
+            }
+            
+            return sortOrder === 'asc' ? comparison : -comparison;
         });
+        
+        // Render the filtered and sorted transactions
+        renderTransactions(filteredTransactions);
     }
 
+    // Function to save transactions to Firebase
     function saveTransactions() {
         const user = auth.currentUser;
         if (user) {
@@ -256,7 +370,12 @@ if (isLoginPage) {
         }
     }
 
-    // New and updated functions for chatbot functionality
+    // Helper function to capitalize first letter
+    function capitalizeFirstLetter(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+
+    // Chatbot Functionality
     function initializeChatbot() {
         if (chatbotMessages) {
             chatbotMessages.innerHTML = '<p class="bot-message">Hello! I\'m your financial assistant. How can I help you today?</p>';
@@ -320,9 +439,84 @@ if (isLoginPage) {
         return prompt;
     }
 
-    // Note: The getAIResponse function is not provided in the given code snippets.
-    // You'll need to implement this function to interact with your AI service.
-    // async function getAIResponse(prompt) {
-    //     // Implement AI interaction here
-    // }
+    // Placeholder for AI response function
+    async function getAIResponse(prompt) {
+        // Implement AI interaction here, e.g., using OpenAI API
+        // For demonstration purposes, we'll return a dummy response
+        return "This is a placeholder response. Implement the AI logic to generate meaningful financial advice.";
+    }
+
+    // Expose editTransaction and deleteTransaction to the global scope for onclick handlers
+    window.editTransaction = editTransaction;
+    window.deleteTransaction = deleteTransaction;
+
+    // Export Functions
+
+    // Function to export transactions as CSV
+    function exportAsCSV() {
+        if (transactions.length === 0) {
+            alert('No transactions to export.');
+            return;
+        }
+
+        const headers = ['Date', 'Type', 'Category', 'Amount'];
+        const rows = transactions.map(t => [t.date, capitalizeFirstLetter(t.type), t.category, t.amount.toFixed(2)]);
+
+        let csvContent = "data:text/csv;charset=utf-8," 
+            + headers.join(",") + "\n"
+            + rows.map(e => e.join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        const user = auth.currentUser;
+        const filename = user ? `${user.uid}_transactions_${new Date().toISOString()}.csv` : `transactions_${new Date().toISOString()}.csv`;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link); // Required for FF
+
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Function to export transactions as PDF
+    function exportAsPDF() {
+        if (transactions.length === 0) {
+            alert('No transactions to export.');
+            return;
+        }
+
+        // Initialize jsPDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(18);
+        doc.text("Student Finance Manager - Transactions", 14, 22);
+
+        // Prepare data for AutoTable
+        const headers = [["Date", "Type", "Category", "Amount"]];
+        const rows = transactions.map(t => [t.date, capitalizeFirstLetter(t.type), t.category, `$${t.amount.toFixed(2)}`]);
+
+        // Add AutoTable
+        doc.autoTable({
+            head: headers,
+            body: rows,
+            startY: 30,
+            styles: { halign: 'left' },
+            headStyles: { fillColor: [41, 128, 185] }
+        });
+
+        // Footer
+        const pageCount = doc.getNumberOfPages();
+        doc.setFontSize(10);
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.text(`Exported on ${new Date().toLocaleString()}`, 14, doc.internal.pageSize.height - 10);
+        }
+
+        // Save the PDF
+        const user = auth.currentUser;
+        const filename = user ? `${user.uid}_transactions_${new Date().toISOString()}.pdf` : `transactions_${new Date().toISOString()}.pdf`;
+        doc.save(filename);
+    }
 }
