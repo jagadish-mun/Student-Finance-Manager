@@ -429,32 +429,60 @@ if (isLoginPage) {
             ${expenseList}
         </ul>
     </div>
-    <div class="summary-charts">
-        <canvas id="incomeExpenseChart"></canvas>
-        <canvas id="categoryPieChart"></canvas>
-        <canvas id="balanceTrendChart"></canvas>
+    <div class="summary-charts" style="z-index: 10; position: relative;">
+        <canvas id="incomeExpensePieChart" style="width: 350px; height: 350px;"></canvas>
     </div>
-  `
+`;
+
 
     // Create charts
-    createIncomeExpenseChart(totalIncome, totalExpenses)
-    createCategoryPieChart(filteredTransactions)
+    createIncomeExpensePieChart(totalIncome, totalExpenses)
     createBalanceTrendChart(filteredTransactions)
   }
 
-  function createIncomeExpenseChart(totalIncome, totalExpenses) {
-    const ctx = document.getElementById("incomeExpenseChart").getContext("2d")
+  function createIncomeExpensePieChart(totalIncome, totalExpenses) {
+    const ctx = document.getElementById("incomeExpensePieChart").getContext("2d");
+
+    new Chart(ctx, {
+        type: "pie",
+        data: {
+            labels: ["Income", "Expenses"],
+            datasets: [
+                {
+                    data: [totalIncome, totalExpenses],
+                    backgroundColor: ["rgba(59, 207, 207, 0.8)", "rgba(255, 99, 132, 0.8)"],
+                },
+            ],
+        },
+        options: {
+            responsive: false, // Disable responsiveness to keep fixed size
+            maintainAspectRatio: false, // Allow custom width/height
+            title: {
+                display: true,
+                text: "Income vs Expenses",
+            },
+        },
+    });
+}
+
+  function createCategoryBarChart(transactions) {
+    const categories = {}
+    transactions.forEach((t) => {
+      if (t.type === "expense") {
+        categories[t.category] = (categories[t.category] || 0) + t.amount
+      }
+    })
+
+    const ctx = document.getElementById("categoryBarChart").getContext("2d")
     new Chart(ctx, {
       type: "bar",
       data: {
-        labels: ["Income", "Expenses"],
+        labels: Object.keys(categories),
         datasets: [
           {
-            label: "Amount",
-            data: [totalIncome, totalExpenses],
-            backgroundColor: ["rgba(75, 192, 192, 0.6)", "rgba(255, 99, 132, 0.6)"],
-            borderColor: ["rgba(75, 192, 192, 1)", "rgba(255, 99, 132, 1)"],
-            borderWidth: 1,
+            label: "Expenses by Category",
+            data: Object.values(categories),
+            backgroundColor: "rgba(54, 162, 235, 0.8)",
           },
         ],
       },
@@ -465,101 +493,52 @@ if (isLoginPage) {
             beginAtZero: true,
           },
         },
-        plugins: {
-          title: {
-            display: true,
-            text: "Income vs Expenses",
-          },
-        },
-      },
-    })
-  }
-
-  function createCategoryPieChart(transactions) {
-    const categories = {}
-    transactions.forEach((t) => {
-      if (categories[t.category]) {
-        categories[t.category] += t.amount
-      } else {
-        categories[t.category] = t.amount
-      }
-    })
-
-    const ctx = document.getElementById("categoryPieChart").getContext("2d")
-    new Chart(ctx, {
-      type: "pie",
-      data: {
-        labels: Object.keys(categories),
-        datasets: [
-          {
-            data: Object.values(categories),
-            backgroundColor: [
-              "rgba(255, 99, 132, 0.6)",
-              "rgba(54, 162, 235, 0.6)",
-              "rgba(255, 206, 86, 0.6)",
-              "rgba(75, 192, 192, 0.6)",
-              "rgba(153, 102, 255, 0.6)",
-            ],
-            borderColor: [
-              "rgba(255, 99, 132, 1)",
-              "rgba(54, 162, 235, 1)",
-              "rgba(255, 206, 86, 1)",
-              "rgba(75, 192, 192, 1)",
-              "rgba(153, 102, 255, 1)",
-            ],
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          title: {
-            display: true,
-            text: "Expenses by Category",
-          },
+        title: {
+          display: true,
+          text: "Expenses by Category",
         },
       },
     })
   }
 
   function createBalanceTrendChart(transactions) {
-    const dailyBalance = {}
-    let runningBalance = 0
-
-    transactions.sort((a, b) => new Date(a.date) - new Date(b.date))
-
-    transactions.forEach((t) => {
-      runningBalance += t.type === "income" ? t.amount : -t.amount
-      dailyBalance[t.date] = runningBalance
+    const sortedTransactions = transactions.sort((a, b) => new Date(a.date) - new Date(b.date))
+    let balance = 0
+    const balances = sortedTransactions.map((t) => {
+      balance += t.type === "income" ? t.amount : -t.amount
+      return { date: t.date, balance }
     })
 
     const ctx = document.getElementById("balanceTrendChart").getContext("2d")
     new Chart(ctx, {
       type: "line",
       data: {
-        labels: Object.keys(dailyBalance),
+        labels: balances.map((b) => b.date),
         datasets: [
           {
-            label: "Balance",
-            data: Object.values(dailyBalance),
+            label: "Balance Trend",
+            data: balances.map((b) => b.balance),
             borderColor: "rgba(75, 192, 192, 1)",
-            tension: 0.1,
+            fill: false,
           },
         ],
       },
       options: {
         responsive: true,
         scales: {
+          x: {
+            type: "time",
+            time: {
+              unit: "day",
+            },
+          },
           y: {
             beginAtZero: true,
           },
         },
-        plugins: {
-          title: {
-            display: true,
-            text: "Balance Trend",
-          },
+        title: {
+          display: true,
+          text: "Balance Trend Over Time",
         },
       },
     })
@@ -885,49 +864,47 @@ if (isLoginPage) {
   function hexToHSL(hex) {
     // Convert hex to RGB first
     let r = 0,
-      g = 0,
-      b = 0
-    if (hex.length == 4) {
-      r = Number.parseInt(hex[1] + hex[1], 16)
-      g = Number.parseInt(hex[2] + hex[2], 16)
-      b = Number.parseInt(hex[3] + hex[3], 16)
-    } else if (hex.length == 7) {
-      r = Number.parseInt(hex[1] + hex[2], 16)
-      g = Number.parseInt(hex[3] + hex[4], 16)
-      b = Number.parseInt(hex[5] + hex[6], 16)
+        g = 0,
+        b = 0;
+    if (hex.length === 4) {
+      r = Number.parseInt(hex[1] + hex[1], 16);
+      g = Number.parseInt(hex[2] + hex[2], 16);
+      b = Number.parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+      r = Number.parseInt(hex[1] + hex[2], 16);
+      g = Number.parseInt(hex[3] + hex[4], 16);
+      b = Number.parseInt(hex[5] + hex[6], 16);
     }
 
     // Convert RGB to HSL
-    r /= 255
-    g /= 255
-    b /= 255
+    r /= 255;
+    g /= 255;
+    b /= 255;
     const max = Math.max(r, g, b),
-      min = Math.min(r, g, b)
-    let h,
-      s,
-      l = (max + min) / 2
+          min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
 
     if (max === min) {
-      h = s = 0 // Achromatic
+      h = s = 0; // Achromatic
     } else {
-      const d = max - min
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
       switch (max) {
         case r:
-          h = (g - b) / d + (g < b ? 6 : 0)
-          break
+          h = (g - b) / d + (g < b ? 6 : 0);
+          break;
         case g:
-          h = (b - r) / d + 2
-          break
+          h = (b - r) / d + 2;
+          break;
         case b:
-          h = (r - g) / d + 4
-          break
+          h = (r - g) / d + 4;
+          break;
       }
-      h /= 6
+      h /= 6;
     }
 
-    return [h * 360, s * 100, l * 100] // Return HSL values
-  }
+    return [h * 360, s * 100, l * 100]; // Return HSL values
+}
 
   function adjustLightness(hsl, lightness) {
     return `hsl(${hsl[0]}, ${hsl[1]}%, ${lightness}%)`
@@ -973,5 +950,21 @@ if (isLoginPage) {
       moveLine(activeButton)
     })
   })
+
+  const style = document.createElement("style")
+  style.textContent = `
+  .summary-charts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    margin-top: 20px;
+  }
+  .summary-charts canvas {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+  }
+`
+  document.head.appendChild(style)
 }
 
