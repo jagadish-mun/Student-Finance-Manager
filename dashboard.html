@@ -10,6 +10,136 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Include jsPDF AutoTable plugin for better tables (Optional but recommended) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        /* Floating Button */
+        .chatbot-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease;
+            z-index: 1000;
+        }
+
+        .chatbot-button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Chatbot Modal */
+        .chatbot-modal {
+            display: none;
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 0;
+            height: 0;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            overflow: hidden;
+            transition: width 0.5s ease, height 0.5s ease, border-radius 0.5s ease;
+            z-index: 1000;
+        }
+
+        .chatbot-modal.open {
+            width: 350px;
+            height: 500px;
+            border-radius: 20px 0 0 20px;
+        }
+
+        .chatbot-modal-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 10px;
+        }
+
+        .close-button {
+            align-self: flex-end;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .close-button:hover {
+            color: #333;
+        }
+
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .chat-message {
+            margin-bottom: 10px;
+        }
+
+        .chat-message.user {
+            text-align: right;
+        }
+
+        .chat-message.ai {
+            text-align: left;
+        }
+
+        .chat-message.user .message-content {
+            display: inline-block;
+            background-color: #d1ffd6;
+            padding: 8px 12px;
+            border-radius: 15px;
+        }
+
+        .chat-message.ai .message-content {
+            display: inline-block;
+            background-color: #e6e6e6;
+            padding: 8px 12px;
+            border-radius: 15px;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: center;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #sendButton {
+            background-color: #3498db;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            margin-left: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #sendButton:hover {
+            background-color: #2980b9;
+        }
+    </style>
 </head>
 <body>
     <div id="appContainer" class="container">
@@ -17,15 +147,17 @@
             <h1><i class="fas fa-wallet"></i> Student Finance Manager</h1>
         </header>
         <nav>
-            <button id="addTransactionBtn" class="active"><i class="fas fa-plus"></i> Add Transaction</button>
-            <button id="viewBalanceBtn"><i class="fas fa-balance-scale"></i> View Balance</button>
-            <button id="generateSummaryBtn"><i class="fas fa-chart-pie"></i> Generate Summary</button>
-            <button id="helpBtn"><i class="fas fa-question-circle"></i> Help</button>
-            <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <button id="addTransactionBtn" class="nav button active"><i class="fas fa-plus"></i>Add Transaction</button>
+            <button id="viewBalanceBtn" class="nav button"><i class="fas fa-balance-scale"></i> View Balance</button>
+            <button id="generateSummaryBtn" class="nav button"><i class="fas fa-chart-pie"></i> Financial Summary</button>
+            <button id="settingsBtn" class="nav button"><i class="fas fa-cog"></i> Settings</button>
+            <button id="helpBtn" class="nav button"><i class="fas fa-question-circle"></i> Help</button>
+            <button id="logoutBtn" class="nav button"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <div class="nav-line"></div>
         </nav>
         <main>
             <!-- Add Transaction Section -->
-            <section id="transactionForm" class="card hidden">
+            <section id="transactionForm" class="acard">
                 <h2><i class="fas fa-exchange-alt"></i> Add Transaction</h2>
                 <form id="transactionInputForm">
                     <div class="form-group">
@@ -47,18 +179,18 @@
                         <label for="date">Date:</label>
                         <input type="date" id="date" required>
                     </div>
-                    <button type="submit" class="btn-primary">Add Transaction</button>
+                    <button type="submit" class="button">Add Transaction</button>
                 </form>
             </section>
             
             <!-- View Balance Section -->
-            <section id="balanceView" class="card hidden">
+            <section id="balanceView" class="cbcard">
                 <h2><i class="fas fa-piggy-bank"></i> Current Balance</h2>
                 <p id="currentBalance" class="balance"></p>
             </section>
             
             <!-- Financial Summary Section -->
-            <section id="summaryView" class="card hidden">
+            <section id="summaryView" class="fcard">
                 <h2><i class="fas fa-chart-bar"></i> Financial Summary</h2>
                 <div class="form-group">
                     <label for="summaryPeriod">Period:</label>
@@ -69,20 +201,10 @@
                 </div>
                 <div id="summaryResults"></div>
                 <canvas id="summaryGraph" width="400" height="50"></canvas>
-                
-                <!-- Chatbot Section -->
-                <div id="chatbotSection">
-                    <h3><i class="fas fa-robot"></i> Financial Assistant</h3>
-                    <div id="chatbotMessages"></div>
-                    <div id="chatbotInput">
-                        <input type="text" id="userInput" placeholder="Ask for financial advice...">
-                        <button id="sendMessage"><i class="fas fa-paper-plane"></i></button>
-                    </div>
-                </div>
             </section>
-            
+
             <!-- Transactions List Section -->
-            <section id="transactionListSection" class="card">
+            <section id="transactionListSection" class="tcard">
                 <h2><i class="fas fa-list"></i> Transactions</h2>
                 
                 <!-- Filters Section -->
@@ -137,34 +259,58 @@
                     <button id="exportCsvBtn" class="btn-export"><i class="fas fa-file-csv"></i> Export as CSV</button>
                 </div>
             </section>
-            
+
+            <!-- Settings Page Section -->
+            <section id="settingsView" class="scard">
+                <h2><i class="fas fa-cog"></i> Settings</h2>
+    
+            <!-- Theme Select -->
+                <div class="form-group">
+                    <label for="themeSelect">Theme:</label>
+                    <select id="themeSelect">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+
+            <!-- Primary Color Select -->
+                <div class="form-group">
+                    <label for="primaryColorSelect">Primary Color:</label>
+                    <input type="color" id="primaryColorSelect" value="#3498db">
+                </div>
+
+            <!-- Save Settings Button -->
+                <button id="saveSettingsBtn" class="button">Save Settings</button>
+            </section>
+
+           
             <!-- Help/FAQ Section -->
-            <section id="helpSection" class="card hidden">
-                <h2><i class="fas fa-question-circle"></i> Help & FAQ</h2>
+            <section id="helpSection" class="hcard">
+                <h2><i class="fas fa-question-circle"></i> Help and FAQ</h2>
                 <div class="faq">
                     <div class="faq-item">
                         <h3>1. How to Add a Transaction?</h3>
-                        <p>Navigate to the <strong>Add Transaction</strong> tab, fill out the form with the transaction details, and click <strong>Add Transaction</strong>.</p>
+                        <p>Navigate to the <strong><span style="color: var(--primary-color);">Add Transaction</span></strong> tab, fill out the form with the transaction details, and click <strong><span style="color: var(--primary-color);">Add Transaction</span></strong>.</p>
                     </div>
                     <div class="faq-item">
                         <h3>2. How to View My Current Balance?</h3>
-                        <p>Click on the <strong>View Balance</strong> tab to see your current financial balance, calculated from your income and expenses.</p>
+                        <p>Click on the <strong><span style="color: var(--primary-color);">View Balance</span></strong> tab to see your current financial balance, calculated from your income and expenses.</p>
                     </div>
                     <div class="faq-item">
                         <h3>3. How to Generate a Financial Summary?</h3>
-                        <p>Go to the <strong>Generate Summary</strong> tab, select the desired period (Weekly or Monthly), and view your financial summary, including total income, expenses, and category breakdowns.</p>
+                        <p>Go to the <strong><span style="color: var(--primary-color);">Generate Summary</span></strong> tab, select the desired period (Weekly or Monthly), and view your financial summary, including total income, expenses, and category breakdowns.</p>
                     </div>
                     <div class="faq-item">
                         <h3>4. How to Export My Transactions?</h3>
-                        <p>In the <strong>Transactions</strong> tab, use the <strong>Export as PDF</strong> or <strong>Export as CSV</strong> buttons at the bottom to download your transactions for offline use or sharing.</p>
+                        <p>In the <strong><span style="color: var(--primary-color);">Transactions</span></strong> tab, use the <strong><span style="color: var(--primary-color);">Export as PDF</span></strong> or <strong><span style="color: var(--primary-color);">Export as CSV</span></strong> buttons at the bottom to download your transactions for offline use or sharing.</p>
                     </div>
                     <div class="faq-item">
                         <h3>5. How to Use the Chatbot?</h3>
-                        <p>Within the <strong>Generate Summary</strong> tab, scroll to the <strong>Financial Assistant</strong> section. Type your financial questions or requests in the input field and click the send button to receive assistance.</p>
+                        <p>On the left, you will find the <strong><span style="color: var(--primary-color);">Financial Assistant</span></strong> section. Type your financial questions or requests in the input field and click the send button to receive assistance.</p>
                     </div>
                     <div class="faq-item">
                         <h3>6. How to Logout?</h3>
-                        <p>Click the <strong>Logout</strong> button in the navigation bar to securely sign out of your account.</p>
+                        <p>Click the <strong><span style="color: var(--primary-color);">Logout</span></strong> button in the navigation bar to securely sign out of your account.</p>
                     </div>
                     <!-- Add more FAQs as needed -->
                 </div>
@@ -177,7 +323,22 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
-    <script src="script.js"></script>
-    <script src="gpt.js"></script>
+    <script type="module" src="script.js"></script>
+    <!-- Floating Button -->
+    <div id="chatbotButton" class="chatbot-button">
+        <span>?</span>
+    </div>
+
+    <!-- Chatbot Modal -->
+    <div id="chatbotModal" class="chatbot-modal">
+        <div class="chatbot-modal-content">
+            <span class="close-button">&times;</span>
+            <div id="chatBox" class="chat-box"></div>
+            <div class="input-container">
+                <input type="text" id="userInput" placeholder="Type your message here" />
+                <button id="sendButton"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -1,10 +1,12 @@
 :root {
-    --primary-color: #3498db;
-    --secondary-color: #2ecc71;
-    --background-color: #ecf0f1;
-    --text-color: #34495e;
-    --card-background: #ffffff;
-    --shadow-color: rgba(0, 0, 0, 0.1);
+    --primary-color: none;
+    --secondary-color: none;
+    --background-color: none;
+    --text-color: none;
+    --card-background: none;
+    --red: #cd2020;
+    --green: #54ce20;
+    --shadow-color: rgba(0, 0, 0, 0.255);
 }
 
 body {
@@ -15,10 +17,71 @@ body {
     background-color: var(--background-color);
     color: var(--text-color);
 }
+
+/* container formats */
+
+.cbcard {
+    margin-bottom: auto;
+    background-color: var(--card-background);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.acard {
+    margin-bottom: auto;
+    background-color: var(--card-background);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.fcard {
+    margin-bottom: auto;
+    background-color: var(--card-background);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    animation: fadeIn 0.5s ease-in-out;
+}
+  
+.tcard {
+    margin-bottom: auto;
+    background-color: var(--card-background);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.hcard {
+    margin-bottom: auto;
+    background-color: var(--card-background);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.Cview {
+    background-color: var(--card-background);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    animation: fadeIn 0.5s ease-in-out;
+    height: 53.5%;
+    padding-left: 1.6rem;
+    padding-top: 1;
+    margin-right: auto;
+}
+
 #chatbotSection {
-    margin-top: 2rem;
-    border-top: 1px solid #ddd;
-    padding-top: 1rem;
+    width: auto; /* or set to a fixed percentage, e.g., 50% */
+    max-width: 100%; /* Ensure it doesn't overflow */
+    display: inline-block; /* To take only as much space as it needs */
+    margin-right: 20px; /* Add some spacing if needed */
 }
 
 #chatbotMessages {
@@ -37,12 +100,18 @@ body {
 #userInput {
     flex-grow: 1;
     margin-right: 0.5rem;
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
 
 .user-message, .bot-message {
     margin-bottom: 0.5rem;
     padding: 0.5rem;
     border-radius: 5px;
+    background-color: var(--background-color);
+}
+.user-message {
+    color: var(--primary-color);
 }
 .filters {
     display: flex;
@@ -62,18 +131,52 @@ body {
 }
 
 .filter-group select {
-    padding: 0.5rem;
     border: 1px solid #ccc;
     border-radius: 4px;
+    display: flex;
+    gap: 10px;
 }
 
 .user-message {
-    background-color: #e6f3ff;
+    background-color: var(--background-color);
     text-align: right;
+    border: 1px solid #ccc;
+    position: relative;
+    border-radius: 15px 15px 0 15px; /* Rounded corners */
+    padding: 0.75rem 1rem;
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: 0;
+}
+
+.user-message::after {
+    content: '';
+    position: absolute;
+    right: -10px;
+    top: 10px;
+    border: 10px solid transparent;
+    border-left-color: var(--background-color); /* Same as the background color */
 }
 
 .bot-message {
-    background-color: #f0f0f0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid #ccc;
+    position: relative;
+    border-radius: 15px 15px 15px 0; /* Rounded corners */
+    padding: 0.75rem 1rem;
+    max-width: 80%;
+    margin-left: 0;
+    margin-right: auto;
+}
+
+.bot-message::after {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 10px;
+    border: 10px solid transparent;
+    border-right-color: var(--background-color); /* Same as the background color */
 }
 
 .container {
@@ -88,7 +191,7 @@ header {
     text-align: center;
     padding: 1rem;
     border-radius: 10px 10px 0 0;
-    box-shadow: 0 2px 5px var(--shadow-color);
+    box-shadow: 0 10px 5px var(--shadow-color);
 }
 
 h1 {
@@ -110,12 +213,11 @@ nav {
     justify-content: space-around;
     position: relative;
     margin-bottom: 20px;
-    border-bottom: 2px solid #ddd;
     padding: 10px 0;
 }
 
 nav button {
-    background: none; /* No background color */
+    background-color: transparent; /* No background color */
     border: none;
     font-size: 1rem;
     padding: 10px 20px;
@@ -123,14 +225,12 @@ nav button {
     transition: color 0.3s ease;
     position: relative;
     outline: none;
-    color: #333; /* Set the default text color */
     border-bottom: 3px solid transparent; /* Start with no bottom border */
+    color: var(--primary-color)
 }
 
-nav button:hover,
-nav button.active {
-    color: #333; /* Change text color on hover or active state */
-    /* border-bottom: 3px solid var(--primary-color);  Add a blue line underneath */
+nav button:hover {
+    background-color: transparent
 }
 
 
@@ -144,22 +244,8 @@ nav button:focus {
     box-shadow: none; /* Ensure no shadow */
 }
 
-
-/* The sliding blue line */
-.nav-line {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    width: 0;
-    background-color: #2980b9;
-    transition: all 0.3s ease; /* Smooth slide effect */
-}
-
-
 button {
     padding: 0.5rem 1rem;
-    margin: 0 0.5rem;
     cursor: pointer;
     background-color: var(--primary-color);
     color: white;
@@ -168,12 +254,8 @@ button {
     transition: background-color 0.3s ease;
 }
 
-.btn-primary {
-    background-color: var(--secondary-color);
-}
-
-.btn-primary:hover {
-    background-color: #27ae60;
+button:hover {
+    background-color: var(--secondary-color)
 }
 
 main {
@@ -187,11 +269,19 @@ main {
     padding: 1rem;
     border-radius: 10px;
     box-shadow: 0 2px 5px var(--shadow-color);
+    animation: fadeIn 0.5s ease-in-out;
 }
 
 .hidden {
     display: none;
 }
+.invalid {
+    border-color: var(--red);
+}
+.valid {
+    border-color: var(--green);
+}
+
 .btn-google {
     background-color: #4285F4;
     color: white;
@@ -223,11 +313,21 @@ label {
 }
 
 input, select {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    padding: 10px;
+    box-sizing: border-box;
     width: 100%;
     padding: 0.5rem;
     border: 1px solid #ccc;
     border-radius: 5px;
     font-size: 1rem;
+    margin-right: 1.2rem;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+input:hover, select:hover {
+    transform: scale(1.02);
 }
 
 #transactions {
@@ -236,13 +336,13 @@ input, select {
 }
 
 #transactions li {
-    background-color: #f8f9fa;
     margin-bottom: 0.5rem;
     padding: 0.5rem;
     border-radius: 5px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border: 1px solid #ccc
 }
 
 .search-container {
@@ -282,14 +382,14 @@ input, select {
     right: 0.5rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #888;
+    color: var(--primary-color);
 }
 
 .balance {
     font-size: 2rem;
     font-weight: bold;
     text-align: center;
-    color: var(--secondary-color);
+    color: rgb(97, 131, 67);
 }
 
 @keyframes fadeIn {
@@ -297,6 +397,55 @@ input, select {
     to { opacity: 1; }
 }
 
-.card {
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.scard {
+    background-color: var(--card-background);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px var(--shadow-color);
     animation: fadeIn 0.5s ease-in-out;
+    width: 50%;
+    margin-right: auto;
+}
+
+
+.btn-primary {
+    background-color: var(--secondary-color);
+    margin-top: 20px;
+}
+
+.cbtn{
+    background-color: var(--primary-color);
+    margin: none;
+    width: 50px;
+    height: 45px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.nav-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background-color: var(--primary-color);
+    transition: all 0.3s ease;
+    width: 0;
+}
+
+button.active ~ .nav-line {
+    left: 10px; /* Initial active button offset */
+}
+
+button.active {
+    font-weight: bold;
 }

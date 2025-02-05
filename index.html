@@ -2,31 +2,38 @@
 <html lang="en">
 
 <head>
+    <!-- Existing head content -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Finance Manager - Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
     <style>
+        /* Existing CSS styles */
+
         body {
             font-family: 'Arial', sans-serif;
-            background: url('https://source.unsplash.com/featured/?finance') no-repeat center center/cover;
             display: flex;
-            justify-content: center;
+            justify-content: flex-end;
             align-items: center;
             height: 100vh;
             margin: 0;
             color: #333;
+            background: transparent;
+            overflow: hidden; /* Hide scrollbars */
+            position: relative; /* Added to position canvas correctly */
         }
 
         .container {
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(209, 209, 209, 0.9);
             padding: 2rem;
             border-radius: 12px;
             box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
             width: 400px;
             max-width: 90%;
             text-align: center;
+            margin-right: 7rem;
+            z-index: 1; /* Ensure the container is above the canvas */
+            position: relative; /* Added to position container above canvas */
         }
 
         .card {
@@ -40,13 +47,13 @@
 
         input[type="email"],
         input[type="password"] {
-            width: calc(100%); /* Adjusted width to account for padding */
+            width: calc(100%);
             padding: 0.8rem;
-            margin: 0.5rem 0; /* Ensure equal margin on all sides */
+            margin: 0.5rem 0;
             border: 1px solid #ccc;
             border-radius: 8px;
             font-size: 1rem;
-            box-sizing: border-box; /* Ensure padding is included in the element's total width and height */
+            box-sizing: border-box;
             transition: all 0.3s ease;
         }
 
@@ -55,8 +62,6 @@
         input[type="email"]:focus,
         input[type="password"]:focus {
             transform: scale(1.05);
-            border-color: #2980b9;
-            box-shadow: 0 0 5px rgba(41, 128, 185, 0.5);
         }
 
         button {
@@ -74,7 +79,6 @@
 
         button:hover {
             transform: scale(1.05);
-            background-color: #1f6391;
         }
 
         .btn-google {
@@ -110,10 +114,81 @@
         .hidden {
             display: none;
         }
+
+        /* New CSS styles for the canvas */
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0; /* Ensure the canvas is behind other elements */
+            background-color: #03040ee8;
+        }
+
+        /* New CSS styles for the animated title */
+
+        /* Title Container Styling */
+        #titleContainer {
+            position: absolute;
+            left: 2%; /* Move it further left */
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+            color: #ffffff;
+            font-size: 2.5rem; /* Smaller font size */
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        /* Adjust line spacing */
+        #animatedTitle {
+            line-height: 1.2;
+        }
+
+        #credits {
+            font-size: 1.75rem;
+            line-height: 0.3;
+            margin-top: auto;
+            color: #276adf;
+        }
+
+        /* Blinking Cursor Animation */
+        @keyframes blinkCursor {
+            from { border-right-color: rgb(20, 136, 219); }
+            to { border-right-color: transparent; }
+        }
+
+        #animatedTitle span {
+            display: inline;
+            border-right: 0.15em solid rgb(0, 119, 255); /* Cursor effect */
+            animation: blinkCursor 0.7s steps(44) infinite normal;
+        }
+        /* New class for blinking cursor animation */
+        .blinkingCursor {
+            border-right: 0.15em solid orange;
+            animation: blinkCursor 0.7s steps(44) infinite normal;
+        }
     </style>
 </head>
 
 <body>
+    <!-- Add the canvas element -->
+    <canvas id="canvas"></canvas>
+
+    <div id="titleContainer">
+        <h1 id="animatedTitle">
+            <span id="line1"></span><br>
+            <span id="line2"></span>
+        </h1>
+        <h2 id="credits">
+            <span id="line3"></span>
+        </h2>
+    </div>
+
+    <!-- Existing body content -->
     <div id="authContainer" class="container">
         <div id="loginForm" class="card">
             <h2>Login</h2>
@@ -132,18 +207,220 @@
             <form id="signup">
                 <input type="email" id="signupEmail" placeholder="Email" required>
                 <input type="password" id="signupPassword" placeholder="Password" required>
-                <button type="submit">Sign Up</button>
+                <ul id="passwordRequirements">
+                    <li id="lengthReq" class="invalid">At least 8 characters</li>
+                    <li id="uppercaseReq" class="invalid">At least one uppercase letter</li>
+                    <li id="lowercaseReq" class="invalid">At least one lowercase letter</li>
+                    <li id="numberReq" class="invalid">At least one number</li>
+                    <li id="specialCharReq" class="invalid">At least one special character (!@#$%^&*)</li>
+                </ul>
+                <button type="submit" id="signupButton" enabled>Sign Up</button>
             </form>
             <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
-        </div>
+        </div>        
     </div>
 
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="script.js"></script>
-    <script src="gpt.js"></script>
-</body>
+
+    <!-- Animated Background Script -->
+    <script>
+        // Get the canvas element and its context
+        // Get the canvas element and its context
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size to window size
+        let w = canvas.width = window.innerWidth;
+        let h = canvas.height = window.innerHeight;
+
+        // Update canvas size on window resize
+        window.addEventListener('resize', function() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        });
+
+        // Parameters for the lines
+        const maxLineCount = 7; // Maximum number of lines on screen
+        const lines = [];
+
+        // Line constructor function
+        function Line() {
+            this.points = [];
+            this.color = 'hsl(' + (Math.random() * 360) + ', 100%, 50%)'; // Random color
+            this.lineWidth = 2 + Math.random() * 2; // Random line width
+            this.speedX = 3 + Math.random() * 2; // Increased horizontal speed for gentler slope
+            this.speedY = -0.5 - Math.random() * 0.5; // Decreased vertical speed for gentler upward movement
+            this.fluctuation = 10 + Math.random() * 10; // Increased fluctuation amplitude
+            this.x = Math.random() * w * 0.1; // Starting x position within 0% to 10% of canvas width
+            this.y = h - Math.random() * h * 0.1; // Starting y position within 90% to 100% of canvas height
+            this.finished = false; // Indicates whether the line has reached the top right
+            this.replaced = false; // Indicates whether a new line has been added upon finishing
+
+            // Initialize with a starting point
+            this.points.push({ x: this.x, y: this.y });
+        }
+
+        // Update the line
+        Line.prototype.update = function() {
+            // Move the line upwards and to the right
+            const lastPoint = this.points[this.points.length - 1];
+
+            // Calculate new point with pronounced fluctuations
+            const dx = this.speedX;
+            const fluctuation = (Math.random() - 0.5) * this.fluctuation;
+            const dy = this.speedY + fluctuation;
+            const newX = lastPoint.x + dx;
+            const newY = lastPoint.y + dy;
+
+            // Add new point
+            this.points.push({ x: newX, y: newY });
+
+            // Check if the line has reached or passed the top right
+            if (!this.finished && (newX >= w || newY <= 0)) {
+                this.finished = true;
+
+                // Create a new line immediately when the current one starts disappearing
+                // No need to check lines.length since we're managing line count separately
+                lines.push(new Line());
+            }
+
+            // After reaching top right, start removing points from the beginning
+            if (this.finished) {
+                // Remove old points
+                this.points.shift();
+
+                // Remove the line from the array if all points have been removed
+                if (this.points.length === 0) {
+                    const index = lines.indexOf(this);
+                    if (index > -1) {
+                        lines.splice(index, 1);
+                    }
+                }
+            }
+        };
+
+        // Draw the line
+        Line.prototype.draw = function() {
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = this.lineWidth;
+
+            // For smoother lines, you can uncomment the Bezier curve drawing method below
+            /*
+            ctx.beginPath();
+            ctx.moveTo(this.points[0].x, this.points[0].y);
+            for (let i = 1; i < this.points.length - 2; i++) {
+                const xc = (this.points[i].x + this.points[i + 1].x) / 2;
+                const yc = (this.points[i].y + this.points[i + 1].y) / 2;
+                ctx.quadraticCurveTo(this.points[i].x, this.points[i].y, xc, yc);
+            }
+            // Curve through the last two points
+            ctx.quadraticCurveTo(
+                this.points[this.points.length - 2].x,
+                this.points[this.points.length - 2].y,
+                this.points[this.points.length - 1].x,
+                this.points[this.points.length - 1].y
+            );
+            ctx.stroke();
+            */
+
+            // Simple line drawing
+            ctx.beginPath();
+            for (let i = 0; i < this.points.length; i++) {
+                const p = this.points[i];
+                if (i === 0) {
+                    ctx.moveTo(p.x, p.y);
+                } else {
+                    ctx.lineTo(p.x, p.y);
+                }
+            }
+            ctx.stroke();
+        };
+
+        // Initial lines
+        for (let i = 0; i < maxLineCount; i++) {
+            lines.push(new Line());
+        }
+
+        // Animation loop
+        function animate() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, w, h);
+
+            // Update and draw each line
+            for (let i = 0; i < lines.length; i++) {
+                lines[i].update();
+                lines[i].draw();
+            }
+
+            // Limit the number of lines to maxLineCount
+            while (lines.length > maxLineCount) {
+                lines.shift(); // Remove the oldest line
+            }
+
+            // Request the next frame
+            requestAnimationFrame(animate);
+        }
+
+        // Start the animation
+        animate();
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const line1Text = "Student Finance";
+            const line2Text = "Manager";
+            const line3Text = "J.M. & A.K."
+            const line1Element = document.getElementById('line1');
+            const line2Element = document.getElementById('line2');
+            const line3Element = document.getElementById('line3');
+            const typingSpeed = 130; // Speed for each character
+            let index1 = 0;
+            let index2 = 0;
+            let index3 = 0;
+
+            function typeLine1() {
+                if (index1 < line1Text.length) {
+                    line1Element.textContent += line1Text.charAt(index1);
+                    index1++;
+                    setTimeout(typeLine1, typingSpeed);
+                } else {
+                    // Start typing the second line after the first is done
+                    setTimeout(typeLine2, typingSpeed * 3);
+                    line1Element.style.borderRight = 'none';
+                }
+            }
+
+            function typeLine2() {
+                if (index2 < line2Text.length) {
+                    line2Element.textContent += line2Text.charAt(index2);
+                    index2++;
+                    setTimeout(typeLine2, typingSpeed);
+                } else {
+                    // Stop the blinking cursor after typing is complete
+                    setTimeout(typeLine3, typingSpeed * 3);
+                    line2Element.style.borderRight = 'none';
+                }
+            }
+            function typeLine3() {
+                if (index3 < line3Text.length) {
+                    line3Element.textContent += line3Text.charAt(index3);
+                    index3++;
+                    setTimeout(typeLine3, typingSpeed);
+                } else {
+                    // Stop the blinking cursor after typing is complete
+                    line3Element.style.borderRight = 'none';
+                }
+            }
+
+            // Start the typing animation for the first line
+            setTimeout(typeLine1(),2000);
+    });
+    </script>
+
+    <!-- Your existing scripts -->
+    <script type="module" src="script.js"></script></body>
 
 </html>
