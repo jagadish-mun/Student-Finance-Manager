@@ -175,22 +175,30 @@ if (isLoginPage) {
 
   // Event listeners for app functionality
   addTransactionBtn.addEventListener("click", () => {
+    transactionListSct.classList.remove("hidden")
     showSection(transactionForm)
     setActiveButton(addTransactionBtn)
   })
   viewBalanceBtn.addEventListener("click", () => {
+    transactionListSct.classList.remove("hidden")
     showSection(balanceView)
     setActiveButton(viewBalanceBtn)
   })
   generateSummaryBtn.addEventListener("click", () => {
+    transactionListSct.classList.remove("hidden")
     showSection(summaryView)
     setActiveButton(generateSummaryBtn)
+    setTimeout(() => {
+      moveLine(generateSummaryBtn)
+    }, 50)
   })
   settingsBtn.addEventListener("click", () => {
+    transactionListSct.classList.add("hidden")
     showSection(settingsView)
     setActiveButton(settingsBtn)
   })
   helpBtn.addEventListener("click", () => {
+    transactionListSct.classList.add("hidden")
     showSection(helpSection)
     setActiveButton(helpBtn)
   })
@@ -218,17 +226,24 @@ if (isLoginPage) {
   // Function to load user data from Firebase
   function loadUserData(user) {
     onValue(ref(database, "users/" + user.uid + "/transactions"), (snapshot) => {
-      const data = snapshot.val() || []
-      transactions = data.map((t) => (t.id ? t : { ...t, id: Date.now() + Math.random() }))
-
-      // Ensure DOM is loaded before calling these functions
-      document.addEventListener("DOMContentLoaded", () => {
-        populateCategoryFilter() // Populate categories
-        applyFilters() // Apply filters to render transactions
-        updateBalance()
-      })
-    })
+      const data = snapshot.val() || [];
+      transactions = data.map((t) => (t.id ? t : { ...t, id: Date.now() + Math.random() }));
+  
+      // Check if DOM is already loaded, otherwise wait for it
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => {
+          populateCategoryFilter();
+          applyFilters();
+          updateBalance();
+        });
+      } else {
+        populateCategoryFilter();
+        applyFilters();
+        updateBalance();
+      }
+    });
   }
+
 
   // Function to populate the Category filter dynamically
   function populateCategoryFilter() {
@@ -261,14 +276,6 @@ if (isLoginPage) {
       setTimeout(() => {
         window.dispatchEvent(new Event("resize"))
       }, 100)
-    }
-
-    if (section == settingsView) {
-      transactionListSct.classList.add("hidden")
-    } else if (section == helpSection) {
-      transactionListSct.classList.add("hidden")
-    } else {
-      transactionListSct.classList.remove("hidden")
     }
   }
 
@@ -437,7 +444,6 @@ if (isLoginPage) {
 
     // Create charts
     createIncomeExpensePieChart(totalIncome, totalExpenses)
-    createBalanceTrendChart(filteredTransactions)
   }
 
   function createIncomeExpensePieChart(totalIncome, totalExpenses) {
@@ -450,7 +456,7 @@ if (isLoginPage) {
             datasets: [
                 {
                     data: [totalIncome, totalExpenses],
-                    backgroundColor: ["rgba(59, 207, 207, 0.8)", "rgba(255, 99, 132, 0.8)"],
+                    backgroundColor: ["rgba(84, 206, 32, 1)", "rgba(205, 32, 32, 1)"],
                 },
             ],
         },
@@ -496,49 +502,6 @@ if (isLoginPage) {
         title: {
           display: true,
           text: "Expenses by Category",
-        },
-      },
-    })
-  }
-
-  function createBalanceTrendChart(transactions) {
-    const sortedTransactions = transactions.sort((a, b) => new Date(a.date) - new Date(b.date))
-    let balance = 0
-    const balances = sortedTransactions.map((t) => {
-      balance += t.type === "income" ? t.amount : -t.amount
-      return { date: t.date, balance }
-    })
-
-    const ctx = document.getElementById("balanceTrendChart").getContext("2d")
-    new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: balances.map((b) => b.date),
-        datasets: [
-          {
-            label: "Balance Trend",
-            data: balances.map((b) => b.balance),
-            borderColor: "rgba(75, 192, 192, 1)",
-            fill: false,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: {
-            type: "time",
-            time: {
-              unit: "day",
-            },
-          },
-          y: {
-            beginAtZero: true,
-          },
-        },
-        title: {
-          display: true,
-          text: "Balance Trend Over Time",
         },
       },
     })
