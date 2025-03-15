@@ -64,6 +64,7 @@
             flex-direction: column;
             height: 100%;
             padding: 10px;
+            background: var(--card-background);
         }
 
         .close-button {
@@ -84,7 +85,7 @@
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
-            background-color: #f9f9f9;
+            background-color: var(--background-color);
         }
 
         .chat-message {
@@ -139,6 +140,144 @@
         #sendButton:hover {
             background-color: #2980b9;
         }
+
+        /* Check Scanner Styles */
+        .check-scanner-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .check-scanner-btn:hover {
+            background-color: #219955;
+        }
+
+        .check-scanner-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .check-scanner-content {
+            position: relative;
+            width: 90%;
+            max-width: 600px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .close-scanner {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        #cameraFeed {
+            width: 100%;
+            border-radius: 8px;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        #captureBtn {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        #captureBtn:hover {
+            background-color: #2980b9;
+        }
+
+        #capturedImage {
+            width: 100%;
+            border-radius: 8px;
+            display: none;
+            margin-bottom: 15px;
+        }
+
+        .scanner-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        #retakeBtn, #processBtn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        #retakeBtn {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        #retakeBtn:hover {
+            background-color: #c0392b;
+        }
+
+        #processBtn {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        #processBtn:hover {
+            background-color: #219955;
+        }
+
+        .processing-indicator {
+            display: none;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 <body>
@@ -181,6 +320,10 @@
                     </div>
                     <button type="submit" class="button">Add Transaction</button>
                 </form>
+                <!-- Check Scanner Button -->
+                <button id="checkScannerBtn" class="check-scanner-btn">
+                    <i class="fas fa-camera"></i> Scan a Check
+                </button>
             </section>
             
             <!-- View Balance Section -->
@@ -309,7 +452,11 @@
                         <p>On the left, you will find the <strong><span style="color: var(--primary-color);">Financial Assistant</span></strong> section. Type your financial questions or requests in the input field and click the send button to receive assistance.</p>
                     </div>
                     <div class="faq-item">
-                        <h3>6. How to Logout?</h3>
+                        <h3>6. How to Scan a Check?</h3>
+                        <p>In the <strong><span style="color: var(--primary-color);">Add Transaction</span></strong> tab, click the <strong><span style="color: var(--primary-color);">Scan a Check</span></strong> button. Allow camera access, take a picture of your check, and the system will automatically extract the amount, date, and add it as an income transaction.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>7. How to Logout?</h3>
                         <p>Click the <strong><span style="color: var(--primary-color);">Logout</span></strong> button in the navigation bar to securely sign out of your account.</p>
                     </div>
                     <!-- Add more FAQs as needed -->
@@ -318,12 +465,46 @@
         </main>
     </div>
 
+    <!-- Check Scanner Modal -->
+    <div id="checkScannerModal" class="check-scanner-modal">
+        <div class="check-scanner-content">
+            <span class="close-scanner">&times;</span>
+            <h2><i class="fas fa-camera"></i> Check Scanner</h2>
+            <p>Position your check within the frame and take a clear photo.</p>
+            
+            <!-- Camera Feed -->
+            <video id="cameraFeed" autoplay playsinline></video>
+            
+            <!-- Captured Image (initially hidden) -->
+            <img id="capturedImage" alt="Captured Check">
+            
+            <!-- Capture Button (shown initially) -->
+            <button id="captureBtn"><i class="fas fa-camera"></i> Take Photo</button>
+            
+            <!-- Retake/Process Buttons (hidden initially) -->
+            <div class="scanner-buttons" style="display: none;">
+                <button id="retakeBtn"><i class="fas fa-redo"></i> Retake</button>
+                <button id="processBtn"><i class="fas fa-check"></i> Process Check</button>
+            </div>
+            
+            <!-- Processing Indicator -->
+            <div class="processing-indicator">
+                <div class="spinner"></div>
+                <p>Analyzing check... Please wait.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="script.js"></script>
+    
+    <!-- Check Scanner Script -->
+    <script type="module" src="check-scanner.js"></script>
+    
     <!-- Floating Button -->
     <div id="chatbotButton" class="chatbot-button">
         <span>?</span>
@@ -342,3 +523,4 @@
     </div>
 </body>
 </html>
+

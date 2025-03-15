@@ -1,5 +1,6 @@
+import { Chart, registerables } from "chart.js/auto"
 // Import Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"
+import { initializeApp } from "firebase/app"
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -8,10 +9,11 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"
+} from "firebase/auth"
+import { getDatabase, ref, set, onValue } from "firebase/database"
 
 const GROQ_API_KEY = "REDACTED_GROQ_API_KEY"
+const GROQ_VISION_API_KEY = "REDACTED_GROQ_API_KEY"
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -28,6 +30,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const database = getDatabase(app)
+
+// Register Chart.js components
+Chart.register(...registerables)
 
 // Get references to auth and database
 
@@ -141,6 +146,18 @@ if (isLoginPage) {
   const settingsView = document.getElementById("settingsView")
   const transactionListSct = document.getElementById("transactionListSection")
 
+  // Check Scanner Elements
+  const checkScannerBtn = document.getElementById("checkScannerBtn")
+  const checkScannerModal = document.getElementById("checkScannerModal")
+  const closeScanner = document.querySelector(".close-scanner")
+  const cameraFeed = document.getElementById("cameraFeed")
+  const capturedImage = document.getElementById("capturedImage")
+  const captureBtn = document.getElementById("captureBtn")
+  const retakeBtn = document.getElementById("retakeBtn")
+  const processBtn = document.getElementById("processBtn")
+  const scannerButtons = document.querySelector(".scanner-buttons")
+  const processingIndicator = document.querySelector(".processing-indicator")
+
   // New Filter Elements
   const filterType = document.getElementById("filterType")
   const filterCategory = document.getElementById("filterCategory")
@@ -157,6 +174,7 @@ if (isLoginPage) {
       loadUserData(user)
       showSection(transactionForm) // Show "Add Transaction" by default when dashboard loads
       initializeChatbot() // Initialize chatbot when the dashboard loads
+      initializeCheckScanner() // Initialize check scanner when the dashboard loads
     } else {
       window.location.href = "index.html"
     }
@@ -305,6 +323,7 @@ if (isLoginPage) {
                         ${capitalizeFirstLetter(transaction.type)}
                     </span>: 
                     $${transaction.amount.toFixed(2)} (${transaction.category})
+                    ${transaction.method ? `<em> - ${transaction.method}</em>` : ""}
                 </span>
                 <div>
                     <button onclick="editTransaction(${transaction.id})" class="btn-edit"><i class="fas fa-edit"></i></button>
@@ -432,8 +451,7 @@ if (isLoginPage) {
     <div class="summary-charts" style="z-index: 10; position: relative;">
         <canvas id="incomeExpensePieChart" style="width: 350px; height: 350px;"></canvas>
     </div>
-`;
-
+`
 
     // Create charts
     createIncomeExpensePieChart(totalIncome, totalExpenses)
@@ -441,29 +459,29 @@ if (isLoginPage) {
   }
 
   function createIncomeExpensePieChart(totalIncome, totalExpenses) {
-    const ctx = document.getElementById("incomeExpensePieChart").getContext("2d");
+    const ctx = document.getElementById("incomeExpensePieChart").getContext("2d")
 
     new Chart(ctx, {
-        type: "pie",
-        data: {
-            labels: ["Income", "Expenses"],
-            datasets: [
-                {
-                    data: [totalIncome, totalExpenses],
-                    backgroundColor: ["rgba(59, 207, 207, 0.8)", "rgba(255, 99, 132, 0.8)"],
-                },
-            ],
+      type: "pie",
+      data: {
+        labels: ["Income", "Expenses"],
+        datasets: [
+          {
+            data: [totalIncome, totalExpenses],
+            backgroundColor: ["rgba(59, 207, 207, 0.8)", "rgba(255, 99, 132, 0.8)"],
+          },
+        ],
+      },
+      options: {
+        responsive: false, // Disable responsiveness to keep fixed size
+        maintainAspectRatio: false, // Allow custom width/height
+        title: {
+          display: true,
+          text: "Income vs Expenses",
         },
-        options: {
-            responsive: false, // Disable responsiveness to keep fixed size
-            maintainAspectRatio: false, // Allow custom width/height
-            title: {
-                display: true,
-                text: "Income vs Expenses",
-            },
-        },
-    });
-}
+      },
+    })
+  }
 
   function createCategoryBarChart(transactions) {
     const categories = {}
@@ -714,6 +732,287 @@ if (isLoginPage) {
     }
   }
 
+  // Check Scanner Implementation
+  let stream = null
+  let capturedImageBlob = null
+
+  function initializeCheckScanner() {
+    if (checkScannerBtn) {
+      checkScannerBtn.addEventListener("click", () => {
+        if (checkScannerModal) {
+          checkScannerModal.style.display = "flex"
+          startCamera()
+        }
+      })
+    }
+
+    if (closeScanner) {
+      closeScanner.addEventListener("click", () => {
+        checkScannerModal.style.display = "none"
+        stopCamera()
+        resetScannerUI()
+      })
+    }
+
+    if (captureBtn) {
+      captureBtn.addEventListener("click", captureCheckImage)
+    }
+
+    if (retakeBtn) {
+      retakeBtn.addEventListener("click", () => {
+        if (cameraFeed) cameraFeed.style.display = "block"
+        if (capturedImage) capturedImage.style.display = "none"
+        if (captureBtn) captureBtn.style.display = "block"
+        if (scannerButtons) scannerButtons.style.display = "none"
+        capturedImageBlob = null
+      })
+    }
+
+    if (processBtn) {
+      processBtn.addEventListener("click", processCheckImage)
+    }
+  }
+
+  // Start camera feed
+  async function startCamera() {
+    if (!cameraFeed) return
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment", // Use back camera if available
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+      })
+      cameraFeed.srcObject = stream
+    } catch (err) {
+      console.error("Error accessing camera:", err)
+      alert("Unable to access your camera. Please ensure you have given permission and have a working camera.")
+    }
+  }
+
+  // Stop camera feed
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop())
+      stream = null
+    }
+  }
+
+  // Reset UI to initial state
+  function resetScannerUI() {
+    if (cameraFeed) cameraFeed.style.display = "block"
+    if (capturedImage) capturedImage.style.display = "none"
+    if (captureBtn) captureBtn.style.display = "block"
+    if (scannerButtons) scannerButtons.style.display = "none"
+    if (processingIndicator) processingIndicator.style.display = "none"
+    capturedImageBlob = null
+  }
+
+  // Capture image from camera
+  function captureCheckImage() {
+    if (!cameraFeed || !capturedImage) return
+
+    // Create a canvas element to capture the frame
+    const canvas = document.createElement("canvas")
+    const context = canvas.getContext("2d")
+
+    // Set canvas dimensions to match the video
+    canvas.width = cameraFeed.videoWidth
+    canvas.height = cameraFeed.videoHeight
+
+    // Draw the current video frame on the canvas
+    context.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height)
+
+    // Convert canvas to data URL (image)
+    const imageDataUrl = canvas.toDataURL("image/jpeg", 0.9)
+
+    // Set the captured image and update UI
+    capturedImage.src = imageDataUrl
+    capturedImage.style.display = "block"
+    cameraFeed.style.display = "none"
+    captureBtn.style.display = "none"
+    scannerButtons.style.display = "flex"
+
+    // Convert data URL to Blob for sending to API
+    canvas.toBlob(
+      (blob) => {
+        capturedImageBlob = blob
+      },
+      "image/jpeg",
+      0.9,
+    )
+  }
+
+  // Process the check image
+  async function processCheckImage() {
+    if (!capturedImageBlob) {
+      alert("No image captured. Please take a photo of your check first.")
+      return
+    }
+
+    // Show processing indicator
+    if (scannerButtons) scannerButtons.style.display = "none"
+    if (processingIndicator) processingIndicator.style.display = "block"
+
+    try {
+      // Process the check using the Groq API
+      const checkData = await processCheckWithGroq(capturedImageBlob)
+
+      // Add the transaction to Firebase
+      await addCheckTransactionToFirebase(checkData)
+
+      // Close the scanner and reset
+      if (checkScannerModal) checkScannerModal.style.display = "none"
+      stopCamera()
+      resetScannerUI()
+
+      // Show success message
+      alert(`Check successfully added as income: $${checkData.amount.toFixed(2)} (${checkData.category})`)
+
+      // Refresh transactions
+      applyFilters()
+      updateBalance()
+    } catch (error) {
+      console.error("Error processing check:", error)
+      if (processingIndicator) processingIndicator.style.display = "none"
+      if (scannerButtons) scannerButtons.style.display = "flex"
+    }
+  }
+
+  // Helper function to convert Blob to base64
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64String = reader.result.split(",")[1]
+        resolve(base64String)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  // Process the check image with Groq's vision model
+  async function processCheckWithGroq(imageBlob) {
+    try {
+      // Convert the image blob to base64
+      const base64Image = await blobToBase64(imageBlob)
+
+      console.log("Sending request to Groq Vision API...")
+
+      // Use the correct Groq API endpoint with the vision API key
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${GROQ_VISION_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.2-11b-vision-preview",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "You are a financial assistant. Extract the amount, date, and category from this check image. Respond with a JSON object with fields: amount (number), date (YYYY-MM-DD), and category (string, default to 'Check Deposit').",
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:image/jpeg;base64,${base64Image}`,
+                  },
+                },
+              ],
+            },
+          ],
+          temperature: 0.2,
+          max_tokens: 150,
+          top_p: 1,
+          stream: false,
+        }),
+      })
+
+      if (!response.ok) {
+        console.error("API response status:", response.status)
+        console.error("API response text:", await response.text())
+        throw new Error(`Groq API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log("Vision API response:", data)
+
+      // Parse the JSON response from the LLM
+      let checkData
+      try {
+        // The AI response might need to be parsed from the text content
+        const responseText = data.choices[0].message.content
+        console.log("Response content:", responseText)
+
+        // Extract JSON if it's within text
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          checkData = JSON.parse(jsonMatch[0])
+        } else {
+          throw new Error("Could not extract JSON from response")
+        }
+      } catch (parseError) {
+        console.error("Error parsing LLM response:", parseError)
+        // Fallback to defaults
+        checkData = {
+          amount: 100.0,
+          category: "Check Deposit",
+          date: new Date().toISOString().split("T")[0],
+        }
+      }
+
+      // Ensure we have all required fields
+      return {
+        amount: Number.parseFloat(checkData.amount || 100.0),
+        category: checkData.category || "Check Deposit",
+        date: checkData.date || new Date().toISOString().split("T")[0],
+      }
+    } catch (error) {
+      console.error("Error calling Groq Vision API:", error)
+      throw error
+    }
+  }
+
+  // Add the check transaction to Firebase
+  async function addCheckTransactionToFirebase(checkData) {
+    try {
+      // Create a new transaction object
+      const newTransaction = {
+        id: Date.now(), // Unique ID
+        type: "income",
+        amount: checkData.amount,
+        category: checkData.category,
+        date: checkData.date,
+        method: "Check Scan",
+      }
+
+      // Add to transactions array
+      transactions.push(newTransaction)
+
+      // Save to Firebase
+      saveTransactions()
+
+      console.log("Check transaction added successfully:", newTransaction)
+      return newTransaction
+    } catch (error) {
+      console.error("Error adding check transaction:", error)
+      throw error
+    }
+  }
+
+  // Make refreshTransactions available globally
+  window.refreshTransactions = () => {
+    applyFilters()
+    updateBalance()
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     initializeChatbot()
   })
@@ -787,8 +1086,14 @@ if (isLoginPage) {
       return
     }
 
-    const headers = ["Date", "Type", "Category", "Amount"]
-    const rows = transactions.map((t) => [t.date, capitalizeFirstLetter(t.type), t.category, t.amount.toFixed(2)])
+    const headers = ["Date", "Type", "Category", "Amount", "Method"]
+    const rows = transactions.map((t) => [
+      t.date,
+      capitalizeFirstLetter(t.type),
+      t.category,
+      t.amount.toFixed(2),
+      t.method || "",
+    ])
 
     const csvContent =
       "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map((e) => e.join(",")).join("\n")
@@ -864,47 +1169,49 @@ if (isLoginPage) {
   function hexToHSL(hex) {
     // Convert hex to RGB first
     let r = 0,
-        g = 0,
-        b = 0;
+      g = 0,
+      b = 0
     if (hex.length === 4) {
-      r = Number.parseInt(hex[1] + hex[1], 16);
-      g = Number.parseInt(hex[2] + hex[2], 16);
-      b = Number.parseInt(hex[3] + hex[3], 16);
+      r = Number.parseInt(hex[1] + hex[1], 16)
+      g = Number.parseInt(hex[2] + hex[2], 16)
+      b = Number.parseInt(hex[3] + hex[3], 16)
     } else if (hex.length === 7) {
-      r = Number.parseInt(hex[1] + hex[2], 16);
-      g = Number.parseInt(hex[3] + hex[4], 16);
-      b = Number.parseInt(hex[5] + hex[6], 16);
+      r = Number.parseInt(hex[1] + hex[2], 16)
+      g = Number.parseInt(hex[3] + hex[4], 16)
+      b = Number.parseInt(hex[5] + hex[6], 16)
     }
 
     // Convert RGB to HSL
-    r /= 255;
-    g /= 255;
-    b /= 255;
+    r /= 255
+    g /= 255
+    b /= 255
     const max = Math.max(r, g, b),
-          min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
+      min = Math.min(r, g, b)
+    let h,
+      s,
+      l = (max + min) / 2
 
     if (max === min) {
-      h = s = 0; // Achromatic
+      h = s = 0 // Achromatic
     } else {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      const d = max - min
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
       switch (max) {
         case r:
-          h = (g - b) / d + (g < b ? 6 : 0);
-          break;
+          h = (g - b) / d + (g < b ? 6 : 0)
+          break
         case g:
-          h = (b - r) / d + 2;
-          break;
+          h = (b - r) / d + 2
+          break
         case b:
-          h = (r - g) / d + 4;
-          break;
+          h = (r - g) / d + 4
+          break
       }
-      h /= 6;
+      h /= 6
     }
 
-    return [h * 360, s * 100, l * 100]; // Return HSL values
-}
+    return [h * 360, s * 100, l * 100] // Return HSL values
+  }
 
   function adjustLightness(hsl, lightness) {
     return `hsl(${hsl[0]}, ${hsl[1]}%, ${lightness}%)`
@@ -963,6 +1270,144 @@ if (isLoginPage) {
     max-width: 100%;
     height: auto;
     margin-bottom: 20px;
+  }
+  
+  /* Check Scanner Styles */
+  .check-scanner-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .check-scanner-btn:hover {
+    background-color: #219955;
+  }
+
+  .check-scanner-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .check-scanner-content {
+    position: relative;
+    width: 90%;
+    max-width: 600px;
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .close-scanner {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #888;
+  }
+
+  #cameraFeed {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+    margin-bottom: 15px;
+  }
+
+  #captureBtn {
+    width: 100%;
+    padding: 12px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+  }
+
+  #captureBtn:hover {
+    background-color: #2980b9;
+  }
+
+  #capturedImage {
+    width: 100%;
+    border-radius: 8px;
+    display: none;
+    margin-bottom: 15px;
+  }
+
+  .scanner-buttons {
+    display: flex;
+    gap: 10px;
+  }
+
+  #retakeBtn, #processBtn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+  }
+
+  #retakeBtn {
+    background-color: #e74c3c;
+    color: white;
+  }
+
+  #retakeBtn:hover {
+    background-color: #c0392b;
+  }
+
+  #processBtn {
+    background-color: #27ae60;
+    color: white;
+  }
+
+  #processBtn:hover {
+    background-color: #219955;
+  }
+
+  .processing-indicator {
+    display: none;
+    text-align: center;
+    margin-top: 15px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: #3498db;
+    animation: spin 1s ease-in-out infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 `
   document.head.appendChild(style)
