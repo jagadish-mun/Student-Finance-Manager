@@ -11,11 +11,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"
 import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"
 
-const GROQ_API_KEY = "REDACTED_GROQ_API_KEY"
-
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "REDACTED_API_KEY",
+  apiKey: "AIzaSyBL1RAg7daU1VjTIUJr-2Wi_Re7kjjoY7Y",
   authDomain: "fbla2024-ad8d8.firebaseapp.com",
   databaseURL: "https://fbla2024-ad8d8-default-rtdb.firebaseio.com",
   projectId: "fbla2024-ad8d8",
@@ -604,27 +602,12 @@ if (isLoginPage) {
         return
       }
 
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const response = await fetch("/api/groq-chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
         },
-        body: JSON.stringify({
-          model: "mixtral-8x7b-32768",
-          messages: [
-            {
-              role: "system",
-              content: `You are a helpful financial assistant for a student finance management application. 
-                        Provide concise and relevant advice based on the user's questions and their financial data. 
-                        Here's the user's current financial information:
-                        ${JSON.stringify(userData, null, 2)}`,
-            },
-            { role: "user", content: userMessage },
-          ],
-          max_tokens: 150,
-          temperature: 0.7,
-        }),
+        body: JSON.stringify({ userMessage, userData }),
       })
 
       if (!response.ok) {
@@ -632,8 +615,7 @@ if (isLoginPage) {
       }
 
       const data = await response.json()
-      const aiReply = data.choices[0].message.content
-      displayMessage(aiReply, "ai")
+      displayMessage(data.reply, "ai")
     } catch (error) {
       console.error("Error in sendMessageToGROQ:", error)
       displayMessage("I'm sorry, I encountered an error. Please try again later.", "ai")

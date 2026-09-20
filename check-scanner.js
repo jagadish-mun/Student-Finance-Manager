@@ -23,9 +23,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let stream = null
   let capturedImageBlob = null
 
-  // Groq Vision API Key
-  const GROQ_VISION_API_KEY = "REDACTED_GROQ_API_KEY"
-
   // Declare refreshTransactions (assuming it's defined elsewhere)
   let refreshTransactions // You might need to assign a function to this
 
@@ -189,37 +186,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       console.log("Sending request to Groq Vision API...")
 
-      // Use the correct Groq API endpoint with the vision API key
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      // Use the local serverless proxy so the Groq API key stays server-side
+      const response = await fetch("/api/groq-vision", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_VISION_API_KEY}`,
         },
-        body: JSON.stringify({
-          model: "llama-3.2-11b-vision-preview",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "You are a financial assistant. Extract the amount, date, and category from this check image. Respond with a JSON object with fields: amount (number), date (YYYY-MM-DD), and category (string, default to 'Check Deposit').",
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:image/jpeg;base64,${base64Image}`,
-                  },
-                },
-              ],
-            },
-          ],
-          temperature: 0.2,
-          max_tokens: 150,
-          top_p: 1,
-          stream: false,
-        }),
+        body: JSON.stringify({ base64Image }),
       })
 
       if (!response.ok) {
